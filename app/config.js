@@ -40,14 +40,14 @@ db.knex.schema.hasTable('clicks').then(function(exists) {
   }
 });
 
-// knex.connection.connect();
+
 
 /************************************************************/
 // Add additional schema definitions below
 /************************************************************/
-db.knex.schema.hasTable('user').then(function(exists) {
+db.knex.schema.hasTable('users').then(function(exists) {
   if (!exists) {
-    db.knex.schema.createTable('user', function (link) {
+    db.knex.schema.createTable('users', function (link) {
       link.increments('id').primary();
       link.string('username', 255);
       link.string('password', 255);

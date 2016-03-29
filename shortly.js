@@ -10,17 +10,25 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+var session = require('express-session');
+
 
 var app = express();
 
 var auth = {};
 auth.login = function(req, res, next) {
+  // console.log("IS THERE A SESSION?");
+  if (!session.secret) {
+    res.redirect('/login');
+  } else {
+    next();
+  }
   // res.statusCode(404);
   console.log('LOGIN and in and in');
   // res.redirect('/login'); 
   // next();
 };
-auth.login();
+// auth.login();
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -31,9 +39,24 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
+app.use(session({
+  secret: 'a4f8071f-c873-4447-8ee2',
+  cookie: { maxAge: 2628000000 },
+  resave: true,
+  saveUninitialized: true
+    // store: new (require('express-sessions'))({
+    //     storage: 'sqlite3',
+    //     host: '127.0.0.1', // optional 
+    //     port: 4568, // optional 
+    //     db: 'shortly.sqlite', // optional 
+    //     collection: 'sessions', // optional 
+    //     expire: 86400 // optional 
+    // })
+}));
+
 app.get('/', 
-function(req, res) {
-  console.log('In get index');
+function(req, res, next) {
+  // console.log('In get index');
   auth.login(req, res, next);
   // some logic
 
@@ -41,12 +64,14 @@ function(req, res) {
 });
 
 app.get('/create', 
-function(req, res) {
+function(req, res, next) {
+  auth.login(req, res, next);
   res.render('index');
 });
 
 app.get('/links', 
-function(req, res) {
+function(req, res, next) {
+  // auth.login(req, res, next);
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
@@ -84,17 +109,48 @@ function(req, res) {
   });
 });
 
+app.get('/signup', 
+function(req, res, next) {
+  res.render('signup');
+});
+
+app.post('/signup', 
+function(req, res, next) {
+  console.log('_____________', typeof req.body);
+  // console.log("SELECTED", db.knex.select().table('users'));
+  new User({
+    'username': body.username,
+    'password': body.password
+  }).save().then(function() {
+    console.log("SUCCESS");
+    // res.send(201);
+  });
+  // db.knex('users')
+  // .insert([{username: req.body.username}, {password: req.body.password}])
+  // .asCallback( function(err, rows) {
+  //   console.log('FINISHED INSERT', err);
+    // res.send(201);
+  // });
+  // console.log('querying: ', db.knex('user').insert({username: 'laura'}).returning('*').toString());
+  // console.log('Asyncing?');
+  // db.knex.insert([{username: req.body.username}, {password: req.body.password}]).into('user', function(err) {
+  //   console.log('FINISHED INSERT', err);
+  // });
+
+  res.send(200);
+});
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
-app.post('/login', 
-function(req, res) {
+app.post('/login', function(req, res) {
   res.send(404);
 });
 
 
 
-// app.get('/login')
+app.get('/login', function(req, res){
+  res.render('login');
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
