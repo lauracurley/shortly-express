@@ -13,6 +13,15 @@ var Click = require('./app/models/click');
 
 var app = express();
 
+var auth = {};
+auth.login = function(req, res, next) {
+  // res.statusCode(404);
+  console.log('LOGIN and in and in');
+  // res.redirect('/login'); 
+  // next();
+};
+auth.login();
+
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.use(partials());
@@ -22,9 +31,12 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
-
 app.get('/', 
 function(req, res) {
+  console.log('In get index');
+  auth.login(req, res, next);
+  // some logic
+
   res.render('index');
 });
 
@@ -75,8 +87,14 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.post('/login', 
+function(req, res) {
+  res.send(404);
+});
 
 
+
+// app.get('/login')
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
