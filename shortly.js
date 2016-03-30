@@ -11,6 +11,8 @@ var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
 var session = require('express-session');
+var bcrypt = require('bcrypt-nodejs');
+
 
 
 var app = express();
@@ -18,10 +20,10 @@ var app = express();
 var auth = {};
 auth.login = function(req, res, next) {
   // console.log("IS THERE A SESSION?");
-  if (!session.secret) {
-    res.redirect('/login');
-  } else {
+  if (req.session && req.session.user) {
     next();
+  } else {
+    res.redirect('/login');
   }
   // res.statusCode(404);
   console.log('LOGIN and in and in');
@@ -41,17 +43,9 @@ app.use(express.static(__dirname + '/public'));
 
 app.use(session({
   secret: 'a4f8071f-c873-4447-8ee2',
-  cookie: { maxAge: 2628000000 },
-  resave: true,
+  resave: false,
   saveUninitialized: true
-    // store: new (require('express-sessions'))({
-    //     storage: 'sqlite3',
-    //     host: '127.0.0.1', // optional 
-    //     port: 4568, // optional 
-    //     db: 'shortly.sqlite', // optional 
-    //     collection: 'sessions', // optional 
-    //     expire: 86400 // optional 
-    // })
+
 }));
 
 app.get('/', 
@@ -60,12 +54,14 @@ function(req, res, next) {
   auth.login(req, res, next);
   // some logic
 
+  res.send(200);
   res.render('index');
 });
 
 app.get('/create', 
 function(req, res, next) {
   auth.login(req, res, next);
+  res.send(200);
   res.render('index');
 });
 
@@ -116,39 +112,67 @@ function(req, res, next) {
 
 app.post('/signup', 
 function(req, res, next) {
-  console.log('_____________', typeof req.body);
+  var username = req.body.username;
+  var password = req.body.password;
   // console.log("SELECTED", db.knex.select().table('users'));
-  new User({
-    'username': body.username,
-    'password': body.password
-  }).save().then(function() {
-    console.log("SUCCESS");
-    // res.send(201);
-  });
-  // db.knex('users')
-  // .insert([{username: req.body.username}, {password: req.body.password}])
-  // .asCallback( function(err, rows) {
-  //   console.log('FINISHED INSERT', err);
-    // res.send(201);
-  // });
-  // console.log('querying: ', db.knex('user').insert({username: 'laura'}).returning('*').toString());
-  // console.log('Asyncing?');
-  // db.knex.insert([{username: req.body.username}, {password: req.body.password}]).into('user', function(err) {
-  //   console.log('FINISHED INSERT', err);
-  // });
-
-  res.send(200);
+  new User({username: username})
+    .fetch()
+    .then(function(user) {
+      if (!user) {
+        bcrypt.hash(password, null, null, function(err, hash) {
+          if (err) {
+            throw err;
+          }
+          Users.create({
+            username: username,
+            password: hash
+          }).then(function(user) {
+            return req.session.regenerate(function() {
+              req.session.user = user;
+              res.redirect('/');
+            });
+          });
+        });
+      } else {
+        console.log('Username is already taken! Try again fool');
+        res.redirect('/signup');
+      }
+    });
+  // res.send(200);
 });
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
 app.post('/login', function(req, res) {
-  res.send(404);
+  var username = req.body.username;
+  var password = req.body.password;
+
+  new User({ username: username })
+    .fetch()
+    .then(function(user) {
+      if (!user) {
+        res.redirect('/signup');
+      } else {
+        bcrypt.compare(password, user.get('password'), function(err, match) {
+          if (match) {
+            return req.session.regenerate(function() {
+              req.session.user = user;
+          
+              res.redirect('/');
+            });
+
+          } else {
+            res.redirect('/login');
+          }
+        });
+      }
+    });
 });
 
 
 
-app.get('/login', function(req, res){
+app.get('/login', function(req, res) {
+  // res.send(200);
   res.render('login');
 });
 
